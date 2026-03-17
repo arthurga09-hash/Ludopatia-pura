@@ -1,49 +1,201 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mis Apuestas</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #121212;
-            color: white;
-            text-align: center;
-            padding: 20px;
-        }
-        .container {
-            max-width: 600px;
-            margin: auto;
-            background: #1e1e1e;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,255,0,0.2);
-        }
-        h1 { color: #00ff00; }
-        .bet-card {
-            border-bottom: 1px solid #333;
-            padding: 10px 0;
-        }
-        .win { color: #00ff00; font-weight: bold; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Apuestas de Arthur</h1>
-        <p>Bienvenido a mi panel de seguimiento de apuestas.</p>
-        
-        <div class="bet-card">
-            <p><strong>Evento:</strong> Real Madrid vs Barcelona</p>
-            <p><strong>Pronóstico:</strong> Gana Local</p>
-            <p class="win">Estado: Pendiente</p>
-        </div>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apuestas entre Colegas ⚽</title>
 
-        <div class="bet-card">
-            <p><strong>Evento:</strong> Manchester City vs Arsenal</p>
-            <p><strong>Pronóstico:</strong> +2.5 Goles</p>
-            <p class="win">Estado: Pendiente</p>
-        </div>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+      font-family: Georgia, serif;
+      color: #fff;
+    }
+
+    input, select, textarea, button {
+      font-family: Georgia, serif;
+    }
+
+    .container {
+      max-width: 660px;
+      margin: 0 auto;
+      padding: 18px 14px 60px;
+    }
+
+    .login-wrap {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .login-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      padding: 40px 32px;
+      max-width: 360px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .input {
+      width: 100%;
+      padding: 11px 13px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.06);
+      color: #fff;
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 13px;
+      border-radius: 10px;
+      border: none;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 11px;
+    }
+
+    .toast {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1e293b;
+      border: 1px solid #6366f1;
+      padding: 10px 20px;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div id="app"></div>
+
+<script>
+const BIN_ID = "69b99b50aa77b81da9f2d396";
+const ACCESS_KEY = "$2a$10$bjCOIgcs/BCcMsQZ4GCSCO0pPhjJLXCr0zZY1rq8irl4nDP.DPUOC";
+const API = "https://api.jsonbin.io/v3/b/" + BIN_ID;
+
+let estado = {
+  usuario: "",
+  datos: null,
+  apuestas: []
+};
+
+async function dbLeer() {
+  try {
+    const r = await fetch(API + "/latest", {
+      headers: { "X-Access-Key": ACCESS_KEY }
+    });
+    const d = await r.json();
+    return d.record || { usuarios: [], apuestas: [] };
+  } catch {
+    return { usuarios: [], apuestas: [] };
+  }
+}
+
+async function dbGuardar(datos) {
+  try {
+    const r = await fetch(API, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Access-Key": ACCESS_KEY
+      },
+      body: JSON.stringify(datos)
+    });
+    return r.ok;
+  } catch {
+    return false;
+  }
+}
+
+function renderLogin() {
+  document.getElementById("app").innerHTML = `
+    <div class="login-wrap">
+      <div class="login-card">
+        <h1>Apuestas ⚽</h1>
+        <input class="input" id="nombre" placeholder="Tu nombre">
+        <br><br>
+        <button class="btn-primary" onclick="entrar()">Entrar</button>
+      </div>
     </div>
+  `;
+}
+
+function renderApp() {
+  const lista = estado.datos.apuestas || [];
+
+  document.getElementById("app").innerHTML = `
+    <div class="container">
+      <h2>Hola ${estado.usuario} 👋</h2>
+      <br>
+
+      <button class="btn-primary" onclick="crear()">Crear apuesta</button>
+
+      <br><br>
+
+      ${lista.map(a => `
+        <div class="card">
+          <strong>${a.partido}</strong><br>
+          ${a.descripcion}<br>
+          💶 ${a.euros}€
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+async function entrar() {
+  const nombre = document.getElementById("nombre").value.trim();
+  if (!nombre) return;
+
+  estado.usuario = nombre;
+  estado.datos = await dbLeer();
+  renderApp();
+}
+
+async function crear() {
+  const nueva = {
+    partido: "Ejemplo",
+    descripcion: "Prueba",
+    euros: 5
+  };
+
+  const nuevas = [nueva, ...(estado.datos.apuestas || [])];
+
+  const ok = await dbGuardar({
+    ...estado.datos,
+    apuestas: nuevas
+  });
+
+  if (ok) {
+    estado.datos.apuestas = nuevas;
+    renderApp();
+  }
+}
+
+(async () => {
+  renderLogin();
+})();
+</script>
+
 </body>
 </html>
